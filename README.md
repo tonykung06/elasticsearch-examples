@@ -438,9 +438,64 @@ GET /my_blog/post/_search
   }
 }
 
+### Creating template, then any later dynamic indexes, which are created at insertion time, will inherit the settings and mappings defined in the template and aliased to "log"
+POST /_template/my_log_template
+{
+	"template": "log_*",
+	"aliases": {
+		"log": {}
+	},
+	"settings": {
+		"index": {
+			"number_of_shards": 5,
+			"number_of_replicas": 1
+		}
+	},
+	"mappings": {
+		"log_event": {
+			"properties": {
+				"log_name": {
+					"type": "string"
+				}
+			}
+		}
+	}
+}
 
+### Dynamically and temporarily change cluster settings for maintenance, disabling shard rebalancing/shuffling ("none" or "all")
+PUT /_cluster/settings
+{
+	"transient": { //"transient" means not saving the setting, "persistent" means saving the setting to elasticsearch.yml file
+		"cluster.routing.allocation.enable": "none"
+	}
+}
 
+### Creating snapshot repo
+PUT /_snapshot/my_es_repo_01
+{
+	"type": "fs",
+	"settings": {
+		"location": "/mnt/esbackup"
+	}
+}
 
+### Creating a snapshot on all indices in the cluster
+PUT /_snapshot/my_es_repo_01/snapshot01
+GET /_snapshot/my_es_repo_01/snapshot01/_status
+GET /_snapshot/my_es_repo_01/snapshot01
+
+### Creating a snapshot on selected indices in the cluster
+PUT /_snapshot/my_es_repo_01/snapshot02
+{
+	"indices": "log_123,log_234"
+}
+
+### Restoring from a snapshot
+POST /_snapshot/my_es_repo_01/snapshot02/_restore
+
+### Cluster health
+GET /_cluster/health?level=indices
+GET /_nodes/stats
 
 
 
